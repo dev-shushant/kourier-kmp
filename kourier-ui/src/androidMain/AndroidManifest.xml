@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <application>
+        <activity
+            android:name="dev.shushant.kourier.ui.activity.KourierActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:theme="@android:style/Theme.Material.NoActionBar"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden" />
+
+        <provider
+            android:name="dev.shushant.kourier.ui.export.KourierFileProvider"
+            android:authorities="${applicationId}.kourier.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/kourier_file_paths" />
+        </provider>
+
+        <receiver
+            android:name="dev.shushant.kourier.ui.triggers.KourierNotificationReceiver"
+            android:exported="false" />
+    </application>
+
+</manifest>

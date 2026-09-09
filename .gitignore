@@ -1,0 +1,14 @@
+.gradle/
+build/
+*/build/
+*.iml
+.idea/
+.DS_Store
+local.properties
+.kotlin/
+.bob/
+.build/
+*.xcframework.zip
+firebase-debug.log
+**/xcuserdata/
+**/*.xcuserstate

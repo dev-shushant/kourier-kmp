@@ -1,0 +1,57 @@
+CREATE TABLE TransactionEntity (
+    id TEXT PRIMARY KEY NOT NULL,
+    timestamp INTEGER NOT NULL,
+    method TEXT NOT NULL,
+    url TEXT NOT NULL,
+    host TEXT NOT NULL,
+    path TEXT NOT NULL,
+    statusCode INTEGER,
+    durationMs INTEGER NOT NULL,
+    isFailed INTEGER NOT NULL,
+    serializedData TEXT NOT NULL
+);
+
+CREATE INDEX idx_transaction_timestamp ON TransactionEntity(timestamp DESC);
+CREATE INDEX idx_transaction_host ON TransactionEntity(host);
+CREATE INDEX idx_transaction_status ON TransactionEntity(statusCode);
+CREATE INDEX idx_transaction_failed ON TransactionEntity(isFailed);
+
+selectAll:
+SELECT serializedData FROM TransactionEntity
+ORDER BY timestamp DESC;
+
+selectById:
+SELECT serializedData FROM TransactionEntity
+WHERE id = :id;
+
+insertOrReplace:
+INSERT OR REPLACE INTO TransactionEntity(
+    id, timestamp, method, url, host, path, statusCode, durationMs, isFailed, serializedData
+) VALUES (
+    :id, :timestamp, :method, :url, :host, :path, :statusCode, :durationMs, :isFailed, :serializedData
+);
+
+searchByQuery:
+SELECT serializedData FROM TransactionEntity
+WHERE url LIKE '%' || :query || '%' OR host LIKE '%' || :query || '%' OR path LIKE '%' || :query || '%'
+ORDER BY timestamp DESC;
+
+deleteById:
+DELETE FROM TransactionEntity WHERE id = :id;
+
+deleteAll:
+DELETE FROM TransactionEntity;
+
+deleteOlderThan:
+DELETE FROM TransactionEntity WHERE timestamp < :timestampCutoff;
+
+countAll:
+SELECT COUNT(*) FROM TransactionEntity;
+
+trimToCount:
+DELETE FROM TransactionEntity
+WHERE id NOT IN (
+    SELECT id FROM TransactionEntity
+    ORDER BY timestamp DESC, id DESC
+    LIMIT :maxCount
+);
