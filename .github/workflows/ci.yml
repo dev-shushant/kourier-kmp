@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  build-linux:
+    name: Build & Test (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+      - name: Build (Gradle)
+        run: ./gradlew --no-daemon clean build
+
+  build-macos:
+    name: Build & Validate (macOS)
+    runs-on: macos-latest
+    needs: build-linux
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Build (Gradle for KMP / iOS frameworks)
+        run: ./gradlew --no-daemon clean assemble
+      - name: Validate Swift Package (SPM)
+        run: |
+          if [ -d "kourier-ios" ]; then
+            cd kourier-ios
+            swift package resolve
+          fi
+

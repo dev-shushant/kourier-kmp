@@ -46,6 +46,15 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import android.content.Intent
 import kotlinx.coroutines.CoroutineScope
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material.Text
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.sp
+
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -55,41 +64,78 @@ class MainActivity : ComponentActivity() {
         setContent {
             val scope = rememberCoroutineScope()
             val stats by KourierTelemetry.stats.collectAsState()
+            val systemInDark = isSystemInDarkTheme()
+            var isDarkTheme by remember { mutableStateOf(systemInDark) }
+
+            // Theme-aware color palette
+            val bgColor = if (isDarkTheme) Color(0xFF0D1117) else Color(0xFFF6F8FA)
+            val cardBg = if (isDarkTheme) Color(0xFF161B22) else Color(0xFFFFFFFF)
+            val cardBorder = if (isDarkTheme) Color(0xFF30363D) else Color(0xFFD0D7DE)
+            val textPrimary = if (isDarkTheme) Color(0xFFF0F6FC) else Color(0xFF1F2328)
+            val textSecondary = if (isDarkTheme) Color(0xFF8B949E) else Color(0xFF656D76)
+            val totalColor = if (isDarkTheme) Color(0xFFF0F6FC) else Color(0xFF1F2328)
 
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color(0xFF121212))
+                    .background(bgColor)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(24.dp),
+                        .padding(horizontal = 24.dp, vertical = 28.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    Text(
-                        text = "Kourier Inspector Sample",
-                        style = MaterialTheme.typography.h5,
-                        color = Color.White
-                    )
+                    // Header with Title & Theme Toggle
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Kourier Inspector",
+                                style = MaterialTheme.typography.h5,
+                                color = textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Shake phone or tap below to launch",
+                                style = MaterialTheme.typography.body2,
+                                color = textSecondary
+                            )
+                        }
 
-                    Spacer(modifier = Modifier.height(6.dp))
-
-                    Text(
-                        text = "Shake phone or tap below to launch debugger",
-                        style = MaterialTheme.typography.body2,
-                        color = Color.LightGray
-                    )
+                        // Theme toggle pill button
+                        Box(
+                            modifier = Modifier
+                                .padding(end = 56.dp)
+                                .background(cardBg, RoundedCornerShape(16.dp))
+                                .border(1.dp, cardBorder, RoundedCornerShape(16.dp))
+                                .clickable { isDarkTheme = !isDarkTheme }
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = if (isDarkTheme) "☀️ Day" else "🌙 Night",
+                                style = MaterialTheme.typography.caption,
+                                color = if (isDarkTheme) Color(0xFFD29922) else Color(0xFF58A6FF)
+                            )
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     // Stats card
                     Card(
-                        backgroundColor = Color(0xFF1E1E1E),
+                        backgroundColor = cardBg,
                         shape = RoundedCornerShape(10.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, cardBorder, RoundedCornerShape(10.dp)),
+                        elevation = if (isDarkTheme) 0.dp else 2.dp
                     ) {
                         Row(
                             modifier = Modifier
@@ -97,30 +143,90 @@ class MainActivity : ComponentActivity() {
                                 .padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceAround
                         ) {
-                            StatColumn(label = "TOTAL", value = "${stats.totalRequests}", color = Color.White)
-                            StatColumn(label = "ACTIVE", value = "${stats.activeRequests}", color = Color(0xFFD29922))
-                            StatColumn(label = "ERRORS", value = "${stats.errorCount}", color = Color(0xFFF85149))
+                            StatColumn(label = "TOTAL", value = "${stats.totalRequests}", color = totalColor, labelColor = textSecondary)
+                            StatColumn(label = "ACTIVE", value = "${stats.activeRequests}", color = if (isDarkTheme) Color(0xFFD29922) else Color(0xFF9A6700), labelColor = textSecondary)
+                            StatColumn(label = "ERRORS", value = "${stats.errorCount}", color = if (isDarkTheme) Color(0xFFF85149) else Color(0xFFCF222E), labelColor = textSecondary)
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(18.dp))
 
-                    // Launch Kourier Button
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    // Primary Launch Button
                     Button(
                         onClick = { Kourier.showUI() },
-                        colors = ButtonDefaults.buttonColors(backgroundColor = Color(0xFF238636)),
-                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = if (isDarkTheme) Color(0xFF238636) else Color(0xFF1A7F37)
+                        ),
+                        shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
-                        Text(text = "LAUNCH KOURIER DEBUGGER", color = Color.White)
+                        Text(text = "LAUNCH KOURIER DEBUGGER", color = Color.White, style = MaterialTheme.typography.button)
                     }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    // Scenario Matrix
+                    // Batch Simulator Button (The 1-tap showcase action!)
+                    Button(
+                        onClick = {
+                            scope.launch(Dispatchers.IO) {
+                                executeGetCall()
+                                kotlinx.coroutines.delay(180)
+                                executePostCallWithAuth()
+                                kotlinx.coroutines.delay(180)
+                                execute404Call()
+                                kotlinx.coroutines.delay(180)
+                                execute500Call()
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            backgroundColor = if (isDarkTheme) Color(0xFF1F6FEB) else Color(0xFF0969DA)
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().height(44.dp)
+                    ) {
+                        Text(text = "⚡ FIRE DEMO TRAFFIC BATCH", color = Color.White, style = MaterialTheme.typography.button)
+                    }
+
+                    Spacer(modifier = Modifier.height(22.dp))
+
+                    // ── Section 1: Security & Data Masking ──────────────────
+                    SectionHeader(
+                        title = "🔒 DATA MASKING & SECURITY",
+                        subtitle = "Auto-redacts passwords, tokens, cookies & PII",
+                        textColor = textPrimary,
+                        subColor = textSecondary
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
                     ScenarioButton(
-                        title = "1. GET 200 OK (OkHttp)",
-                        color = Color(0xFF58A6FF)
+                        title = "POST /auth/login (Redacts Passwords & PII)",
+                        engineTag = "OkHttp",
+                        color = if (isDarkTheme) Color(0xFFBC8CFF) else Color(0xFF8250DF),
+                        isDark = isDarkTheme
+                    ) {
+                        scope.launch(Dispatchers.IO) { executePostCallWithAuth() }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    // ── Section 2: Multiplatform Network Traffic ────────────
+                    SectionHeader(
+                        title = "🌐 MULTIPLATFORM NETWORK ENGINES",
+                        subtitle = "Unified interception across OkHttp and Ktor 3",
+                        textColor = textPrimary,
+                        subColor = textSecondary
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    ScenarioButton(
+                        title = "GET /users (200 OK Standard Request)",
+                        engineTag = "OkHttp",
+                        color = if (isDarkTheme) Color(0xFF58A6FF) else Color(0xFF0969DA),
+                        isDark = isDarkTheme
                     ) {
                         scope.launch(Dispatchers.IO) { executeGetCall() }
                     }
@@ -128,17 +234,42 @@ class MainActivity : ComponentActivity() {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     ScenarioButton(
-                        title = "2. POST Masked Auth (OkHttp)",
-                        color = Color(0xFFBC8CFF)
+                        title = "Ktor 3.x Client (GET & POST Pipeline)",
+                        engineTag = "Ktor 3",
+                        color = if (isDarkTheme) Color(0xFF79C0FF) else Color(0xFF0550AE),
+                        isDark = isDarkTheme
                     ) {
-                        scope.launch(Dispatchers.IO) { executePostCallWithAuth() }
+                        scope.launch(Dispatchers.IO) { executeKtorCalls() }
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     ScenarioButton(
-                        title = "3. GET 404 Client Error (OkHttp)",
-                        color = Color(0xFFF85149)
+                        title = "GET /image.png (Binary Media Preview)",
+                        engineTag = "OkHttp",
+                        color = if (isDarkTheme) Color(0xFF2EA043) else Color(0xFF116329),
+                        isDark = isDarkTheme
+                    ) {
+                        scope.launch(Dispatchers.IO) { executeImageDownloadCall() }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    // ── Section 3: Diagnostics & Error Handling ─────────────
+                    SectionHeader(
+                        title = "⚠️ ERROR DIAGNOSTICS & RESILIENCE",
+                        subtitle = "Real-time error badges, alert trays & latency logs",
+                        textColor = textPrimary,
+                        subColor = textSecondary
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    ScenarioButton(
+                        title = "GET /status/404 (Client Error)",
+                        engineTag = "404",
+                        color = if (isDarkTheme) Color(0xFFF85149) else Color(0xFFCF222E),
+                        isDark = isDarkTheme
                     ) {
                         scope.launch(Dispatchers.IO) { execute404Call() }
                     }
@@ -146,8 +277,10 @@ class MainActivity : ComponentActivity() {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     ScenarioButton(
-                        title = "4. GET 500 Server Error (OkHttp)",
-                        color = Color(0xFFDA3633)
+                        title = "GET /status/500 (Server Crash Alert)",
+                        engineTag = "500",
+                        color = if (isDarkTheme) Color(0xFFDA3633) else Color(0xFFA40E26),
+                        isDark = isDarkTheme
                     ) {
                         scope.launch(Dispatchers.IO) { execute500Call() }
                     }
@@ -155,8 +288,10 @@ class MainActivity : ComponentActivity() {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     ScenarioButton(
-                        title = "5. Slow Call 3s Delay (OkHttp)",
-                        color = Color(0xFFD29922)
+                        title = "GET /delay/3s (Latency & Waterfall)",
+                        engineTag = "3s",
+                        color = if (isDarkTheme) Color(0xFFD29922) else Color(0xFF9A6700),
+                        isDark = isDarkTheme
                     ) {
                         scope.launch(Dispatchers.IO) { executeSlowCall() }
                     }
@@ -164,28 +299,12 @@ class MainActivity : ComponentActivity() {
                     Spacer(modifier = Modifier.height(8.dp))
 
                     ScenarioButton(
-                        title = "6. Large Payload >1MB (OkHttp)",
-                        color = Color(0xFF3FB950)
+                        title = "GET /bytes/1MB (Large Payload Truncation)",
+                        engineTag = "1MB",
+                        color = if (isDarkTheme) Color(0xFF3FB950) else Color(0xFF1A7F37),
+                        isDark = isDarkTheme
                     ) {
                         scope.launch(Dispatchers.IO) { executeLargePayloadCall() }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    ScenarioButton(
-                        title = "7. Image Download (OkHttp)",
-                        color = Color(0xFF2EA043)
-                    ) {
-                        scope.launch(Dispatchers.IO) { executeImageDownloadCall() }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    ScenarioButton(
-                        title = "8. Ktor Client GET & POST",
-                        color = Color(0xFF79C0FF)
-                    ) {
-                        scope.launch(Dispatchers.IO) { executeKtorCalls() }
                     }
                 }
             }
@@ -316,20 +435,97 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun StatColumn(label: String, value: String, color: Color) {
+private fun StatColumn(
+    label: String,
+    value: String,
+    color: Color,
+    labelColor: Color = Color.Gray
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = value, style = MaterialTheme.typography.h6, color = color)
-        Text(text = label, style = MaterialTheme.typography.caption, color = Color.Gray)
+        Text(text = label, style = MaterialTheme.typography.caption, color = labelColor)
     }
 }
 
 @Composable
-private fun ScenarioButton(title: String, color: Color, onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        shape = RoundedCornerShape(8.dp),
-        modifier = Modifier.fillMaxWidth().height(42.dp)
+private fun SectionHeader(
+    title: String,
+    subtitle: String,
+    textColor: Color,
+    subColor: Color
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 2.dp)
     ) {
-        Text(text = title, color = color)
+        Text(
+            text = title,
+            style = MaterialTheme.typography.caption.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold),
+            color = textColor
+        )
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(
+            text = subtitle,
+            style = MaterialTheme.typography.caption,
+            color = subColor
+        )
     }
 }
+
+@Composable
+private fun ScenarioButton(
+    title: String,
+    engineTag: String = "",
+    color: Color,
+    isDark: Boolean = true,
+    onClick: () -> Unit
+) {
+    androidx.compose.material.Button(
+        onClick = onClick,
+        shape = RoundedCornerShape(8.dp),
+        colors = ButtonDefaults.buttonColors(
+            backgroundColor = if (isDark) color.copy(alpha = 0.12f) else color.copy(alpha = 0.08f)
+        ),
+        elevation = ButtonDefaults.elevation(0.dp, 0.dp, 0.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .border(
+                1.dp,
+                if (isDark) color.copy(alpha = 0.5f) else color.copy(alpha = 0.4f),
+                RoundedCornerShape(8.dp)
+            )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                color = color,
+                style = MaterialTheme.typography.button,
+                maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false)
+            )
+            if (engineTag.isNotEmpty()) {
+                Spacer(modifier = Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .background(color.copy(alpha = if (isDark) 0.25f else 0.18f), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = engineTag,
+                        style = MaterialTheme.typography.caption.copy(fontSize = 10.sp),
+                        color = color
+                    )
+                }
+            }
+        }
+    }
+}
+
+
