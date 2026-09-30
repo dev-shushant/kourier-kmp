@@ -12,12 +12,14 @@ import kotlinx.coroutines.launch
 
 /** Shared inspector controls; activation is explicit and never restored automatically. */
 @Composable
-fun ScenarioControls() {
+fun ScenarioControls(targetUrl: String = "", method: String = "GET") {
     val engine = ResilienceRuntime.engine
     val state by engine.state.collectAsState()
     val scope = rememberCoroutineScope()
     val colors = LocalKourierColors.current
     var showDetails by remember { mutableStateOf(false) }
+    var showEditor by remember { mutableStateOf(false) }
+    if (showEditor) ScenarioEditor(targetUrl, method, onDismiss = { showEditor = false }, onLoaded = { showEditor = false; showDetails = true })
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -38,6 +40,7 @@ fun ScenarioControls() {
             title = { Text(state.name ?: "Scenarios") },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(onClick = { showDetails = false; showEditor = true }) { Text("Create scenario") }
                     Text(if (state.id == null) "No scenario loaded." else "${state.ruleCount} rules · ${state.decisionCount} decisions")
                     if (state.id != null && !state.bindingsReady) Text("Map the scenario's host aliases before enabling faults.")
                     Text("Only configured clients are affected. Counters reset when the app restarts.")

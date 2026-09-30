@@ -18,7 +18,7 @@ Branch: `codex/resilience-r1-foundation`. All roadmap implementation stays on th
 
 ## Verification
 
-Shared validation and decision tests execute on Android host and iOS simulator. They cover round trips, invalid replacements, bounds, rule ordering, reset, activation, caller mutation, query ordering, GraphQL operation matching, capacity exhaustion, and concurrent first-one assignment. The 30 September 2026 run passed 36 tests on each platform (72 executions), alongside Android sample assembly and iOS facade compilation. Consult Gradle test XML for the latest run; successful engine tests prove decisions, not native fault execution.
+Shared validation and decision tests execute on Android host and iOS simulator. They cover round trips, invalid replacements, bounds, rule ordering, reset, activation, caller mutation, query ordering, GraphQL operation matching, capacity exhaustion, and concurrent first-one assignment. The 30 September 2026 run passed 40 tests on each platform (80 executions), alongside Android sample assembly and iOS facade compilation. Consult Gradle test XML for the latest run; successful engine tests prove decisions, not native fault execution.
 
 ## Expanded transport requirement
 
@@ -35,6 +35,8 @@ Ktor shared execution now passes on Android and iOS: synthetic response/fixture,
 Configured URLSession now executes shared bound decisions. It preserves the ephemeral inner session with custom protocols disabled, serializes lifecycle changes/callback delivery, maps timeout/disconnect to NSURLErrorDomain native codes, emits synthetic status/body through URLProtocol callbacks, and cancels pending work on host cancellation. Three iOS simulator tests passed through actual Foundation URLSession callbacks: Unicode fixture/503 evidence, both native error mappings, and cancellation of a pending 30-second fault. iOS facade compilation passed. Disabled/forwarded local-backend behavior, redirects, cache, release packaging, and a linked sample still need verification.
 
 Shared inspector controls now observe a read-only scenario summary, show active/disabled status, allow explicit enable/reset/disable, and surface counter-capacity warnings. Private origin bindings and matcher secrets are excluded from this summary. UI activation requires complete local alias bindings. State tests passed on Android and iOS; Android sample build and iOS facade compilation passed. The controls row was visually inspected on a physical Android device. UI Automator could not obtain an idle inspector tree, so modal interaction was not claimed as verified. iOS visual verification, the rule editor, capture-to-mock, and pack workflow remain incomplete.
+
+Shared single-rule editor now creates HTTP status, delay/forward, timeout, and disconnect scenarios from entered or captured targets, with optional explicit GraphQL operation and first-N controls. Shared draft validation prevents invalid numbers from becoming unlimited faults, normalizes the local binding, and excludes private origin/query values from the portable scenario. Load remains disabled; enable is separate. Eight new draft test executions passed across Android/iOS; Android assembly and iOS compilation passed. End-to-end modal interaction remains unverified: the device’s legacy UI Automator runner aborted because an Android test annotation was unavailable. This runner failure is not an app test pass. Multi-rule editing, fixtures, packs, iOS visual checks, and a supported UI automation runner remain outstanding.
 
 ## Remaining R1 requirements
 

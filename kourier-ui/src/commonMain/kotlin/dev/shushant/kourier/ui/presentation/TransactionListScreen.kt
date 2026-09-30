@@ -40,13 +40,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import dev.shushant.kourier.core.engine.HarExporter
 import dev.shushant.kourier.core.model.HttpTransaction
 import dev.shushant.kourier.ui.components.BatchExportDialog
-import dev.shushant.kourier.ui.components.ScenarioControls
 import dev.shushant.kourier.ui.components.FilterChipRow
 import dev.shushant.kourier.ui.components.KourierSettingsModal
-import dev.shushant.kourier.ui.export.ShareHandler
+import dev.shushant.kourier.ui.components.ScenarioControls
 import dev.shushant.kourier.ui.theme.KourierTypography
 import dev.shushant.kourier.ui.theme.LocalKourierColors
 
@@ -270,7 +268,8 @@ fun TransactionListScreen(
                     .background(colors.border)
             )
 
-            ScenarioControls()
+            val target = transactions.firstOrNull { it.id == selectedTransactionId } ?: transactions.firstOrNull()
+            ScenarioControls(target?.request?.url ?: "", target?.request?.method ?: "GET")
 
             // ── Filters & Search ────────────────────────────────────────────────
             FilterChipRow(
