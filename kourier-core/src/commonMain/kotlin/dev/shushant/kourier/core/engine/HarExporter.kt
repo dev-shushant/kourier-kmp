@@ -20,7 +20,7 @@ data class HarLog(
 
 @Serializable
 data class HarCreator(
-    val name: String = "Kourier KMP",
+    val name: String = "AppArmorX Resilience",
     val version: String = "1.0.0"
 )
 
@@ -172,7 +172,7 @@ object HarExporter {
     fun exportAsPlainText(transactions: List<HttpTransaction>): String {
         val sb = StringBuilder()
         sb.append("================================================================================\n")
-        sb.append("KOURIER KMP NETWORK TELEMETRY EXPORT\n")
+        sb.append("APPARMORX RESILIENCE NETWORK TELEMETRY EXPORT\n")
         sb.append("Total Transactions: ${transactions.size}\n")
         sb.append("================================================================================\n\n")
 

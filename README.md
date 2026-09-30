@@ -1,6 +1,10 @@
-# Kourier — SDK source
+# AppArmorX Resilience — SDK source
 
-Kourier is an on-device HTTP inspection and telemetry SDK for Android and iOS, built with Kotlin Multiplatform and Compose Multiplatform. It captures traffic through OkHttp, Ktor, and URLSession integrations and provides an inspector with request details, payload redaction, local storage, and export tools.
+**AppArmorX Resilience**, formerly **Kourier**, is the mobile API reliability toolkit within [AppArmorX](https://apparmorx.com/). This checkout provides its on-device HTTP inspection and telemetry foundation for Android and iOS, built with Kotlin Multiplatform and Compose Multiplatform. It captures traffic through OkHttp, Ktor, and URLSession integrations and provides an inspector with request details, payload redaction, local storage, and export tools.
+
+> **Rebrand compatibility:** Existing releases remain available under the Kourier repository URLs, Maven coordinates, Kotlin APIs, and Swift products. No integration changes are required for this branding update. See [the transition guide](docs/rebranding.md).
+
+The next release will add controlled API experiments and portable scenarios. Those capabilities are **planned**, not available in the current inspector. See [the product blueprint](docs/product-and-engineering-blueprint.md).
 
 This is the **source repository**: SDK implementation, sample apps, tests, and release tooling live here.
 
@@ -9,10 +13,12 @@ This is the **source repository**: SDK implementation, sample apps, tests, and r
 | [kourier-kmp](https://github.com/dev-shushant/kourier-kmp) | Develop, test, and build the SDK                                                   |
 | [kourier](https://github.com/dev-shushant/kourier)         | Consumer documentation, public Maven artifacts, Swift package, and binary releases |
 
-**Adding Kourier to an app?** Start with the [Android and iOS integration guide](https://github.com/dev-shushant/kourier#readme). Choose a version from the [published releases](https://github.com/dev-shushant/kourier/releases). The source version in [version.properties](version.properties) describes this checkout and is not a guarantee that the same version has been published.
+**Adding AppArmorX Resilience to an app?** Start with the [Android and iOS integration guide](https://github.com/dev-shushant/kourier#readme). Choose a version from the [published releases](https://github.com/dev-shushant/kourier/releases). The source version in [version.properties](version.properties) describes this checkout and is not a guarantee that the same version has been published.
 
 ## Contents
 
+- [Brand and compatibility](docs/rebranding.md)
+- [Product blueprint](docs/product-and-engineering-blueprint.md)
 - [Capabilities](#capabilities)
 - [Source architecture](#source-architecture)
 - [Build and run locally](#build-and-run-locally)
@@ -30,7 +36,7 @@ This is the **source repository**: SDK implementation, sample apps, tests, and r
 - Export diagnostic text, HAR, and cURL representations of captured traffic.
 - Use `kourier-noop` for Android release builds where inspection should be disabled.
 
-Capture applies to clients wired to a Kourier integration. See the consumer guide for setup, permissions, configuration, and platform behavior.
+Capture applies to clients wired to an AppArmorX Resilience integration. See the consumer guide for setup, permissions, configuration, and platform behavior.
 
 ## Source architecture
 

@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import dev.shushant.kourier.core.engine.HarExporter
 import dev.shushant.kourier.core.model.HttpTransaction
@@ -111,38 +112,27 @@ fun TransactionListScreen(
 
                 Spacer(modifier = Modifier.width(10.dp))
 
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Kourier",
-                            style = KourierTypography.titleLarge,
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(colors.methodGet.copy(alpha = 0.15f))
-                                .padding(horizontal = 5.dp, vertical = 1.dp)
-                        ) {
-                            Text(
-                                text = "INSPECTOR",
-                                style = KourierTypography.badgeSmall,
-                                color = colors.methodGet
-                            )
-                        }
-                    }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "AppArmorX",
+                        style = KourierTypography.titleLarge,
+                        color = colors.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
 
                     Spacer(modifier = Modifier.height(2.dp))
 
                     Text(
-                        text = if (transactions.isEmpty()) "0 requests" else "${transactions.size} requests recorded",
+                        text = "Resilience · ${transactions.size} requests",
                         style = KourierTypography.caption,
-                        color = colors.textMuted
+                        color = colors.textMuted,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.width(8.dp))
 
                 // Action: Export HAR
                 Box(

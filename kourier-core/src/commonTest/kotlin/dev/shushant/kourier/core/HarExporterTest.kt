@@ -32,14 +32,14 @@ class HarExporterTest {
 
         val harJson = HarExporter.export(listOf(transaction))
         assertTrue(harJson.contains("\"version\": \"1.2\""))
-        assertTrue(harJson.contains("\"name\": \"Kourier KMP\""))
+        assertTrue(harJson.contains("\"name\": \"AppArmorX Resilience\""))
         assertTrue(harJson.contains("https://httpbin.org/get?query=test"))
         assertTrue(harJson.contains("\"status\": 200"))
         // HAR is JSON, so an embedded response body must be JSON-escaped.
         assertTrue(harJson.contains("{\\\"success\\\":true}"))
 
         val plainText = HarExporter.exportAsPlainText(listOf(transaction))
-        assertTrue(plainText.contains("KOURIER KMP NETWORK TELEMETRY EXPORT"))
+        assertTrue(plainText.contains("APPARMORX RESILIENCE NETWORK TELEMETRY EXPORT"))
         assertTrue(plainText.contains("GET https://httpbin.org/get?query=test"))
         assertTrue(plainText.contains("200 OK"))
     }

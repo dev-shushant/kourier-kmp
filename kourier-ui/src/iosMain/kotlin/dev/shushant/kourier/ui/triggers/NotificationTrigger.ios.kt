@@ -240,7 +240,7 @@ actual object NotificationTrigger {
             val title = if (hasErrors) {
                 "⚠️ ${telemetry.errorCount} Errors • ${telemetry.totalRequests} Requests"
             } else {
-                "⚡️ Kourier • ${telemetry.totalRequests} Requests Recorded"
+                "⚡️ AppArmorX Resilience • ${telemetry.totalRequests} Requests Recorded"
             }
             val subtitle = if (telemetry.activeRequests > 0) {
                 "⏳ ${telemetry.activeRequests} Active • ${telemetry.formattedThroughput}"

@@ -1,32 +1,51 @@
-# Quickstart — Android (network module integration)
+# AppArmorX Resilience — Android quickstart
 
-This guide shows the minimal steps to add Kourier into an Android network module (e.g., an OkHttp-based networking module). Kourier is intended to be used inside your network layer — there's no need to change app launch logic.
+AppArmorX Resilience, formerly Kourier, provides on-device network inspection. Existing coordinates and APIs remain compatible. Choose a published version from the [distribution releases](https://github.com/dev-shushant/kourier/releases).
 
-1) Add dependencies (module build.gradle.kts)
-implementation("dev.shushant:kourier-core:<version>")
-implementation("dev.shushant:kourier-interceptor-okhttp:<version>")
+Add the public repository to `settings.gradle.kts`:
 
-2) Create / wire the OkHttp client
+```kotlin
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://raw.githubusercontent.com/dev-shushant/kourier/mvn-repo")
+    }
+}
+```
+
+Use the inspector for debug and the existing no-op artifact for release:
+
+```kotlin
+dependencies {
+    debugImplementation("dev.shushant.kourier:kourier-android:<version>")
+    releaseImplementation("dev.shushant.kourier:kourier-noop:<version>")
+}
+```
+
+Initialize once in `Application.onCreate()`:
+
+```kotlin
+import dev.shushant.kourier.android.Kourier
+
+Kourier.init(this) {
+    redactHeaders("Authorization", "Cookie", "Set-Cookie", "X-Api-Key")
+    redactPayloadKeys("password", "token", "secret")
+    redactQueryParams("token", "apiKey")
+}
+```
+
+Attach the interceptor to the client used by the app:
+
+```kotlin
 import dev.shushant.kourier.interceptor.okhttp.KourierOkHttpInterceptor
+import okhttp3.OkHttpClient
 
 val client = OkHttpClient.Builder()
-  .addInterceptor(KourierOkHttpInterceptor.create(/* optional config */))
-  .build()
+    .addInterceptor(KourierOkHttpInterceptor())
+    .build()
+```
 
-3) Initialize core if needed (optional for most interceptors)
-import dev.shushant.kourier.core.KourierCore
+Open with `Kourier.showUI()` or a configured trigger. Request Android 13+ notification permission if using the notification trigger. Only clients wired to an integration are captured. Fault injection and portable scenarios are planned, not included in this quickstart.
 
-// Call once in your network module initialization
-KourierCore.initialize(
-  config = KourierCore.Config(
-    // platform-specific configuration if required
-  )
-)
-
-4) Verify in tests
-- Add a unit test in your network module that uses MockWebServer to assert interceptor behavior (retries, headers, caching).
-
-Notes
-- Replace <version> with the library version (match Maven Central coordinates).
-- Kourier is Kotlin Multiplatform — this interceptor is designed for JVM/Android use.
-
+See the [consumer guide](https://github.com/dev-shushant/kourier#readme), [local sample](../sample-android/README.md), and [brand transition](rebranding.md).

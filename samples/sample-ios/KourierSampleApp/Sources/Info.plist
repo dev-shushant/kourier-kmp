@@ -13,7 +13,9 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Kourier Sample</string>
+	<string>AppArmorX Resilience Sample</string>
+	<key>CFBundleDisplayName</key>
+	<string>AppArmorX Resilience</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

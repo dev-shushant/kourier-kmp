@@ -69,7 +69,7 @@ subprojects {
             publications.withType<MavenPublication> {
                 pom {
                     name.set(project.name)
-                    description.set("Kourier - Enterprise Network Inspection SDK for Android & iOS")
+                    description.set("AppArmorX Resilience - On-device HTTP inspection and telemetry for Android & iOS")
                     url.set("https://github.com/$githubRepo")
                     licenses {
                         license {

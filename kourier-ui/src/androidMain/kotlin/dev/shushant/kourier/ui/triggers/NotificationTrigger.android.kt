@@ -82,7 +82,7 @@ actual object NotificationTrigger {
             // 1. Silent ongoing tray channel: docked in drawer, never pops up heads-up on normal requests
             val trayChannel = NotificationChannel(
                 CHANNEL_TRAY_ID,
-                "Kourier Network Tray",
+                "AppArmorX Resilience Network Tray",
                 NotificationManager.IMPORTANCE_LOW
             ).apply {
                 description = "Ongoing network telemetry docked silently in notification drawer"
@@ -95,7 +95,7 @@ actual object NotificationTrigger {
             // 2. High-importance error alert channel: pops up heads-up ONLY when a network error occurs
             val alertChannel = NotificationChannel(
                 CHANNEL_ALERT_ID,
-                "Kourier Error Alerts",
+                "AppArmorX Resilience Error Alerts",
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "Heads-up alert notifications when network requests fail"
@@ -191,7 +191,7 @@ actual object NotificationTrigger {
         } else if (hasErrors) {
             "⚠️ ${telemetry.errorCount} Errors • ${telemetry.totalRequests} Requests"
         } else {
-            "⚡ Kourier • ${telemetry.totalRequests} Requests Recorded"
+            "⚡ AppArmorX Resilience • ${telemetry.totalRequests} Requests Recorded"
         }
 
         val contentText = "${telemetry.formattedThroughput} • ${telemetry.activeRequests} active"

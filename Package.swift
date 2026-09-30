@@ -1,4 +1,5 @@
 // swift-tools-version:5.9
+// AppArmorX Resilience: legacy Kourier products and targets retained for compatibility.
 import PackageDescription
 
 let package = Package(
