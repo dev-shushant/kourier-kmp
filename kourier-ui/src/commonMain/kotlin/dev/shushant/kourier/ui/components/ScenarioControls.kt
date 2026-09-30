@@ -20,7 +20,11 @@ fun ScenarioControls(transactions: List<HttpTransaction> = emptyList()) {
     val colors = LocalKourierColors.current
     var showDetails by remember { mutableStateOf(false) }
     var showEditor by remember { mutableStateOf(false) }
-    if (showEditor) ScenarioEditor(transactions, onDismiss = { showEditor = false }, onLoaded = { showEditor = false; showDetails = true })
+    var savedTarget by remember { mutableStateOf<String?>(null) }
+    if (showEditor) ScenarioEditor(
+        transactions = transactions,
+        onDismiss = { showEditor = false },
+        onLoaded = { savedTarget = it; showEditor = false; showDetails = true })
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
@@ -36,30 +40,26 @@ fun ScenarioControls(transactions: List<HttpTransaction> = emptyList()) {
         TextButton(onClick = { showDetails = true }) { Text("Scenarios") }
     }
     if (showDetails) {
-        AlertDialog(
-            onDismissRequest = { showDetails = false },
-            title = { Text(state.name ?: "Scenarios") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    TextButton(onClick = { showDetails = false; showEditor = true }) { Text("Create scenario") }
-                    Text(if (state.id == null) "No scenario loaded." else "${state.ruleCount} rules · ${state.decisionCount} decisions")
-                    if (state.id != null && !state.bindingsReady) Text("Map the scenario's host aliases before enabling faults.")
-                    Text("Only configured clients are affected. Counters reset when the app restarts.")
-                    if (state.counterCapacityReached) Text("Occurrence capacity reached. New request identities are forwarded normally. Reset the scenario to clear counters.")
-                    if (state.id != null) {
-                        TextButton(onClick = { scope.launch { engine.reset() } }) { Text("Reset scenario") }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = state.id != null && (state.active || state.bindingsReady),
-                    onClick = { scope.launch { if (state.active) engine.disable() else engine.enable() } }
-                ) { Text(if (state.active) "Disable all" else "Enable faults") }
-            },
-            dismissButton = { TextButton(onClick = { showDetails = false }) { Text("Close") } },
-            backgroundColor = colors.surface,
-            contentColor = colors.textPrimary
-        )
+        ScenarioDialog(state.name ?: "Scenarios", onDismiss = { showDetails = false }, footer = {
+            TextButton(onClick = { showDetails = false }) { Text("Close") }
+            if (state.id != null) Button(
+                enabled = state.active || state.bindingsReady,
+                onClick = { scope.launch { if (state.active) engine.disable() else engine.enable() } }
+            ) { Text(if (state.active) "Disable all" else "Enable faults") }
+        }) {
+            Text(if (state.active) "Faults active" else "Faults disabled", style = MaterialTheme.typography.subtitle1)
+            if (state.id == null) {
+                Text("Choose an endpoint from captured traffic and decide which failure to test.")
+                Button(onClick = { showDetails = false; showEditor = true }) { Text("Create scenario") }
+            } else {
+                savedTarget?.let { Text(it, style = MaterialTheme.typography.body2) }
+                Text("${state.ruleCount} rules · ${state.decisionCount} decisions")
+                if (!state.bindingsReady) Text("Map the scenario's host aliases before enabling faults.")
+                Text("Only configured clients are affected. Counters reset when the app restarts.", style = MaterialTheme.typography.body2)
+                if (state.counterCapacityReached) Text("Occurrence capacity reached. New request identities are forwarded normally. Reset to clear counters.")
+                TextButton(onClick = { scope.launch { engine.reset() } }) { Text("Reset occurrence counters") }
+                TextButton(onClick = { showDetails = false; showEditor = true }) { Text("Replace scenario") }
+            }
+        }
     }
 }

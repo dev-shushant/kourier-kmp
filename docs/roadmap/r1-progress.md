@@ -58,3 +58,7 @@ Shared single-rule editor now creates HTTP status, delay/forward, timeout, and d
 - [ ] External pilots and field-validation evidence before R2 investment.
 
 R2 journey markers, deterministic findings, OpenAPI validation and incident capsules, plus R3 instrumentation/interoperability/protocol work remain in the blueprint with their decision gates. This foundation does not satisfy or replace those milestones. No roadmap capabilities are published.
+
+### Captured endpoint scenario creation
+
+The shared Android/iOS editor now starts with an explicit, searchable choice from captured method/endpoint pairs, stripping query strings and fragments. Manual URL entry is an optional fallback. Failure presets and next-request/every-request choices replace the default raw form; custom status, delay and GraphQL operation remain expandable. Saving loads the scenario disabled for separate review and activation. The editor uses the inspector theme in a bounded custom dialog with a scrolling body and fixed actions. Android sample assembly and Android/iOS UI compilation passed. Device layout, keyboard and accessibility verification remain pending; no visual acceptance is claimed.

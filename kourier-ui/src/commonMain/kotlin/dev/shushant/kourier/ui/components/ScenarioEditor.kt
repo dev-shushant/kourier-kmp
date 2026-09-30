@@ -11,6 +11,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.window.Dialog
 import dev.shushant.kourier.core.ResilienceRuntime
 import dev.shushant.kourier.core.model.HttpTransaction
@@ -22,7 +25,7 @@ import kotlinx.coroutines.launch
 
 /** A captured endpoint is selected explicitly; query strings never enter the draft. */
 @Composable
-fun ScenarioEditor(transactions: List<HttpTransaction>, onDismiss: () -> Unit, onLoaded: () -> Unit) {
+fun ScenarioEditor(transactions: List<HttpTransaction>, onDismiss: () -> Unit, onLoaded: (String) -> Unit) {
     val endpoints = remember(transactions) {
         transactions.map { it.request.method to it.request.url.substringBefore('?').substringBefore('#') }.distinct()
     }
@@ -44,7 +47,7 @@ fun ScenarioEditor(transactions: List<HttpTransaction>, onDismiss: () -> Unit, o
                 loading = true
                 try {
                     errors = ResilienceRuntime.engine.load(scenario, result.hostBindings)
-                    if (errors.isEmpty()) onLoaded()
+                    if (errors.isEmpty()) onLoaded("${draft.method} ${draft.targetUrl.substringBefore('?').substringBefore('#')}\n${when (draft.action) { DraftAction.HTTP_RESPONSE -> "HTTP ${draft.status}"; DraftAction.DELAY -> "Delay ${draft.delayMs} ms"; DraftAction.TIMEOUT -> "Timeout"; DraftAction.DISCONNECT -> "Disconnect" }} · ${if (draft.firstOccurrences.isEmpty()) "Every matching request" else "Next request only"}")
                 } finally { loading = false }
             }
         }) { Text(if (loading) "Saving…" else "Save scenario") }
@@ -53,7 +56,7 @@ fun ScenarioEditor(transactions: List<HttpTransaction>, onDismiss: () -> Unit, o
             Text("Choose an endpoint", style = MaterialTheme.typography.subtitle1)
             Text("Use a request your app already made.", style = MaterialTheme.typography.body2)
             OutlinedTextField(search, { search = it }, label = { Text("Search host or path") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-            val matches = endpoints.filter { (method, url) -> "$method $url".contains(search, ignoreCase = true) }.take(40)
+            val matches = endpoints.filter { (method, url) -> "$method $url".contains(search, ignoreCase = true) }
             if (endpoints.isEmpty()) Text("Make a request in your app, then return here to select it.")
             else if (matches.isEmpty()) Text("No matching endpoints.")
             matches.forEach { (method, url) ->
@@ -104,7 +107,7 @@ fun ScenarioEditor(transactions: List<HttpTransaction>, onDismiss: () -> Unit, o
 @Composable
 private fun ScenarioChoice(label: String, selected: Boolean, onClick: () -> Unit) {
     val colors = LocalKourierColors.current
-    Row(Modifier.fillMaxWidth().border(1.dp, if (selected) MaterialTheme.colors.primary else colors.border, RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().border(1.dp, if (selected) MaterialTheme.colors.primary else colors.border, RoundedCornerShape(10.dp)).semantics { this.selected = selected }.clickable(role = Role.RadioButton, onClick = onClick).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(if (selected) "✓  $label" else label, color = colors.textPrimary, style = MaterialTheme.typography.body2)
     }
 }
