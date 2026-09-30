@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import dev.shushant.kourier.core.engine.HarExporter
 import dev.shushant.kourier.core.model.HttpTransaction
 import dev.shushant.kourier.ui.components.BatchExportDialog
+import dev.shushant.kourier.ui.components.ScenarioControls
 import dev.shushant.kourier.ui.components.FilterChipRow
 import dev.shushant.kourier.ui.components.KourierSettingsModal
 import dev.shushant.kourier.ui.export.ShareHandler
@@ -268,6 +269,8 @@ fun TransactionListScreen(
                     .height(1.dp)
                     .background(colors.border)
             )
+
+            ScenarioControls()
 
             // ── Filters & Search ────────────────────────────────────────────────
             FilterChipRow(

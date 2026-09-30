@@ -18,7 +18,7 @@ Branch: `codex/resilience-r1-foundation`. All roadmap implementation stays on th
 
 ## Verification
 
-Shared validation and decision tests execute on Android host and iOS simulator. They cover round trips, invalid replacements, bounds, rule ordering, reset, activation, caller mutation, query ordering, GraphQL operation matching, capacity exhaustion, and concurrent first-one assignment. The 30 September 2026 run passed 33 tests on each platform (66 executions), alongside Android sample assembly and iOS facade compilation. Consult Gradle test XML for the latest run; successful engine tests prove decisions, not native fault execution.
+Shared validation and decision tests execute on Android host and iOS simulator. They cover round trips, invalid replacements, bounds, rule ordering, reset, activation, caller mutation, query ordering, GraphQL operation matching, capacity exhaustion, and concurrent first-one assignment. The 30 September 2026 run passed 36 tests on each platform (72 executions), alongside Android sample assembly and iOS facade compilation. Consult Gradle test XML for the latest run; successful engine tests prove decisions, not native fault execution.
 
 ## Expanded transport requirement
 
@@ -33,6 +33,8 @@ OkHttp MockWebServer tests prove a synthetic 503 avoids the network, the next ca
 Ktor shared execution now passes on Android and iOS: synthetic response/fixture, delay permit, timeout and disconnect mapping, disabled/exhausted forwarding, GraphQL operation-specific matching, and safe transaction evidence. Synthetic responses run the native receive pipeline, including body preservation, capture, and host `expectSuccess` validation. The adapter uses the pinned Ktor 3.1.3 internal HttpClientCall constructor; version upgrades require repeating these compatibility tests. Received response metadata is retained when host validation subsequently throws. Twelve Ktor test executions passed (six per platform), alongside Android sample assembly and iOS facade compilation. Configured URLSession execution is now implemented; full forwarding/retry/redirect/cache parity remains outstanding.
 
 Configured URLSession now executes shared bound decisions. It preserves the ephemeral inner session with custom protocols disabled, serializes lifecycle changes/callback delivery, maps timeout/disconnect to NSURLErrorDomain native codes, emits synthetic status/body through URLProtocol callbacks, and cancels pending work on host cancellation. Three iOS simulator tests passed through actual Foundation URLSession callbacks: Unicode fixture/503 evidence, both native error mappings, and cancellation of a pending 30-second fault. iOS facade compilation passed. Disabled/forwarded local-backend behavior, redirects, cache, release packaging, and a linked sample still need verification.
+
+Shared inspector controls now observe a read-only scenario summary, show active/disabled status, allow explicit enable/reset/disable, and surface counter-capacity warnings. Private origin bindings and matcher secrets are excluded from this summary. UI activation requires complete local alias bindings. State tests passed on Android and iOS; Android sample build and iOS facade compilation passed. The controls row was visually inspected on a physical Android device. UI Automator could not obtain an idle inspector tree, so modal interaction was not claimed as verified. iOS visual verification, the rule editor, capture-to-mock, and pack workflow remain incomplete.
 
 ## Remaining R1 requirements
 

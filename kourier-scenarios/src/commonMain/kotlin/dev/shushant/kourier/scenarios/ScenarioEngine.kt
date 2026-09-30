@@ -1,6 +1,7 @@
 package dev.shushant.kourier.scenarios
 
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.sync.Mutex
@@ -26,9 +27,23 @@ data class ScenarioDecision(
     val executionVersion: Long = 0
 )
 
+data class ScenarioState(
+    val id: String? = null,
+    val name: String? = null,
+    val active: Boolean = false,
+    val ruleCount: Int = 0,
+    val bindingsReady: Boolean = false,
+    val decisionCount: Long = 0,
+    val counterCapacityReached: Boolean = false
+)
+
 /** Per-process engine. Loading does not activate faults. Decision assignment is atomic. */
 class ScenarioEngine {
     private val mutex = Mutex()
+    private val mutableState = MutableStateFlow(ScenarioState())
+    val state = mutableState.asStateFlow()
+    private var decisionCount = 0L
+    private var capacityReached = false
     private var loaded: Scenario? = null
     private val activation = MutableStateFlow(false)
     private var enabled: Boolean
@@ -59,7 +74,10 @@ class ScenarioEngine {
             enabled = false
             origins = parsed.toMap()
             counts.clear()
+            decisionCount = 0
+            capacityReached = false
             invalidateDecisions()
+            publishState()
         }
         return emptyList()
     }
@@ -68,13 +86,14 @@ class ScenarioEngine {
         val wasEnabled = enabled
         enabled = loaded != null
         if (enabled != wasEnabled) invalidateDecisions()
+        publishState()
         enabled
     }
 
-    suspend fun disable() = mutex.withLock { enabled = false; invalidateDecisions() }
+    suspend fun disable() = mutex.withLock { enabled = false; invalidateDecisions(); publishState() }
     fun isActive(): Boolean = activation.value
     suspend fun isEnabled(): Boolean = mutex.withLock { enabled }
-    suspend fun reset() = mutex.withLock { counts.clear(); invalidateDecisions() }
+    suspend fun reset() = mutex.withLock { counts.clear(); decisionCount = 0; capacityReached = false; invalidateDecisions(); publishState() }
 
     /** False means the pending fault was invalidated; the adapter should forward normally. */
     suspend fun awaitDelay(decision: ScenarioDecision): Boolean {
@@ -117,7 +136,11 @@ class ScenarioEngine {
             if (!ScenarioMatching.matches(rule.match, request)) continue
             val key = CounterKey(rule.id, identity)
             // Never evict counters and accidentally repeat a first-occurrence fault.
-            if (key !in counts && counts.size >= MAX_COUNTERS) continue
+            if (key !in counts && counts.size >= MAX_COUNTERS) {
+                capacityReached = true
+                publishState()
+                continue
+            }
             val previous = counts[key] ?: 0L
             val occurrence = if (previous == Long.MAX_VALUE) previous else previous + 1L
             counts[key] = occurrence
@@ -130,9 +153,20 @@ class ScenarioEngine {
             if (sequence.isNotEmpty() && occurrence > sequence.size) continue
             val action = if (sequence.isEmpty()) rule.action else sequence[(occurrence - 1L).toInt()]
             val fixture = if (action is ScenarioAction.HttpResponse) scenario.fixtures.firstOrNull { it.id == action.fixtureId } else null
+            decisionCount++
+            publishState()
             return ScenarioDecision(scenario.id, rule.id, occurrence, action, rule.delayMs, fixture, executionVersion.value)
         }
         return null
+    }
+
+    private fun publishState() {
+        val scenario = loaded
+        mutableState.value = ScenarioState(
+            scenario?.id, scenario?.name, enabled, scenario?.rules?.size ?: 0,
+            scenario != null && scenario.rules.all { it.match.hostAlias in origins },
+            decisionCount, capacityReached
+        )
     }
 
     companion object { const val MAX_COUNTERS = 4096 }
