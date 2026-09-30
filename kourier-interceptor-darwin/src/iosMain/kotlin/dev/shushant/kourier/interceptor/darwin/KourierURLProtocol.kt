@@ -1,6 +1,23 @@
 package dev.shushant.kourier.interceptor.darwin
 
 import dev.shushant.kourier.core.KourierCore
+import dev.shushant.kourier.core.ResilienceRuntime
+import dev.shushant.kourier.scenarios.GraphqlInspector
+import dev.shushant.kourier.scenarios.ScenarioAction
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.CancellationException
+import platform.Foundation.NSRecursiveLock
+import platform.Foundation.NSURLErrorDomain
+import platform.Foundation.NSURLErrorTimedOut
+import platform.Foundation.NSURLErrorNetworkConnectionLost
+import platform.Foundation.NSLocalizedDescriptionKey
+import kotlinx.cinterop.usePinned
+import kotlinx.cinterop.addressOf
 import dev.shushant.kourier.core.model.ErrorPayload
 import dev.shushant.kourier.core.model.HttpRequest
 import dev.shushant.kourier.core.model.HttpResponse
@@ -43,6 +60,17 @@ private const val KOURIER_HANDLED_KEY = "dev.shushant.kourier.handled"
 @OptIn(ExperimentalForeignApi::class, BetaInteropApi::class)
 class KourierURLProtocol : NSURLProtocol, NSURLSessionDataDelegateProtocol {
 
+    private val lifecycleLock = NSRecursiveLock()
+    private val faultScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private var faultJob: Job? = null
+    private var stopped = false
+    private var finished = false
+
+    private inline fun <T> withLifecycle(block: () -> T): T {
+        lifecycleLock.lock()
+        try { return block() } finally { lifecycleLock.unlock() }
+    }
+
     private var activeTask: NSURLSessionDataTask? = null
     private var internalSession: NSURLSession? = null
     private var transactionId: String = ""
@@ -78,7 +106,8 @@ class KourierURLProtocol : NSURLProtocol, NSURLSessionDataDelegateProtocol {
         }
     }
 
-    override fun startLoading() {
+    override fun startLoading() { withLifecycle {
+        if (stopped) return@withLifecycle
         val rawRequest = request
         val mutableRequest = rawRequest.mutableCopy() as NSMutableURLRequest
         Companion.setProperty("YES", forKey = KOURIER_HANDLED_KEY, inRequest = mutableRequest)
@@ -154,6 +183,59 @@ class KourierURLProtocol : NSURLProtocol, NSURLSessionDataDelegateProtocol {
 
         initialTx?.let { KourierCore.recordRequestStarted(it) }
 
+        val engine = ResilienceRuntime.engine
+        if (!engine.isActive()) {
+            forward(mutableRequest)
+        } else {
+            val operation = if (!isTruncated) GraphqlInspector.request(requestBodyStr).operationName else null
+            faultJob = faultScope.launch {
+                try {
+                    val decision = engine.decideUrl(urlString, method, rawHeaders, operation)
+                    val permitted = decision != null && engine.awaitDelay(decision)
+                    withLifecycle {
+                        if (stopped) return@withLifecycle
+                        if (!permitted) {
+                            forward(mutableRequest)
+                        } else {
+                            initialTx = initialTx?.copy(
+                                tags = ResilienceRuntime.evidence(decision, "urlsession"),
+                                totalBytesSent = if (decision.action == ScenarioAction.Forward) bodyBytes else 0
+                            )
+                            initialTx?.let { KourierCore.recordTransactionUpdated(it) }
+                            when (val action = decision.action) {
+                                ScenarioAction.Forward -> forward(mutableRequest)
+                                ScenarioAction.Timeout -> finish(NSError.errorWithDomain(NSURLErrorDomain, NSURLErrorTimedOut, mapOf(NSLocalizedDescriptionKey to "Injected timeout")))
+                                ScenarioAction.Disconnect -> finish(NSError.errorWithDomain(NSURLErrorDomain, NSURLErrorNetworkConnectionLost, mapOf(NSLocalizedDescriptionKey to "Injected disconnect")))
+                                is ScenarioAction.HttpResponse -> {
+                                    val fixture = decision.fixture
+                                    val bytes = (fixture?.body ?: "").encodeToByteArray()
+                                    val data = if (bytes.isEmpty()) NSData() else bytes.usePinned {
+                                        NSData.create(bytes = it.addressOf(0), length = bytes.size.toULong())
+                                    }
+                                    val headers = mutableMapOf<Any?, Any?>("Content-Length" to data.length.toString())
+                                    fixture?.contentType?.let { headers["Content-Type"] = it }
+                                    val response = NSHTTPURLResponse(request.URL!!, action.status.toLong(), "HTTP/1.1", headers)
+                                    responseStartNs = PlatformUtils.nanoTime()
+                                    httpResponse = response
+                                    receivedData?.appendData(data)
+                                    totalBytesReceived = data.length.toLong()
+                                    client?.URLProtocol(this@KourierURLProtocol, response, NSURLCacheStoragePolicy.NSURLCacheStorageNotAllowed)
+                                    if (stopped) return@withLifecycle
+                                    if (data.length > 0u) client?.URLProtocol(this@KourierURLProtocol, didLoadData = data)
+                                    if (!stopped) finish(null)
+                                }
+                            }
+                        }
+                    }
+                } catch (cancelled: CancellationException) {
+                    // stopLoading owns cancellation; no manufactured response.
+                    throw cancelled
+                }
+            }
+        }
+    } }
+
+    private fun forward(mutableRequest: NSMutableURLRequest) {
         // Use ephemeralSessionConfiguration with an EMPTY protocolClasses list so
         // KourierURLProtocol is NOT re-applied to the forwarded request.
         // defaultSessionConfiguration inherits all registered protocols, causing
@@ -161,7 +243,7 @@ class KourierURLProtocol : NSURLProtocol, NSURLSessionDataDelegateProtocol {
         val sessionConfig = NSURLSessionConfiguration.ephemeralSessionConfiguration
         sessionConfig.protocolClasses = emptyList<Any>()
         val backgroundQueue = NSOperationQueue().apply {
-            maxConcurrentOperationCount = 4
+            maxConcurrentOperationCount = 1
         }
         internalSession = NSURLSession.sessionWithConfiguration(
             configuration = sessionConfig,
@@ -172,7 +254,20 @@ class KourierURLProtocol : NSURLProtocol, NSURLSessionDataDelegateProtocol {
         activeTask?.resume()
     }
 
-    override fun stopLoading() {
+    override fun stopLoading() { withLifecycle {
+        if (stopped) return@withLifecycle
+        stopped = true
+        if (!finished) initialTx?.let { tx ->
+            val end = PlatformUtils.nanoTime()
+            KourierCore.recordTransactionCompleted(tx.copy(
+                status = TransactionStatus.FAILED,
+                error = ErrorPayload("Request cancelled", "NSURLErrorDomain", "", PlatformUtils.currentTimeMillis()),
+                timings = tx.timings.copy(requestEndNs = end, durationMs = (end - startNs) / 1_000_000L)
+            ))
+        }
+        faultScope.cancel()
+        faultJob?.cancel()
+        faultJob = null
         activeTask?.cancel()
         activeTask = null
         internalSession?.invalidateAndCancel()
@@ -180,7 +275,7 @@ class KourierURLProtocol : NSURLProtocol, NSURLSessionDataDelegateProtocol {
         receivedData = null
         httpResponse = null
         initialTx = null
-    }
+    } }
 
     override fun URLSession(
         session: NSURLSession,
@@ -188,20 +283,22 @@ class KourierURLProtocol : NSURLProtocol, NSURLSessionDataDelegateProtocol {
         willPerformHTTPRedirection: NSHTTPURLResponse,
         newRequest: NSURLRequest,
         completionHandler: (NSURLRequest?) -> Unit
-    ) {
+    ) { withLifecycle {
+        if (stopped || finished) { completionHandler(null); return@withLifecycle }
         val mutableNewReq = (newRequest.mutableCopy() as? NSMutableURLRequest)
             ?: NSMutableURLRequest.requestWithURL(newRequest.URL!!)
         Companion.setProperty("YES", forKey = KOURIER_HANDLED_KEY, inRequest = mutableNewReq)
         client?.URLProtocol(this, wasRedirectedToRequest = mutableNewReq, redirectResponse = willPerformHTTPRedirection)
         completionHandler(mutableNewReq)
-    }
+    } }
 
     override fun URLSession(
         session: NSURLSession,
         dataTask: NSURLSessionDataTask,
         didReceiveResponse: NSURLResponse,
         completionHandler: (platform.Foundation.NSURLSessionResponseDisposition) -> Unit
-    ) {
+    ) { withLifecycle {
+        if (stopped || finished) { completionHandler(platform.Foundation.NSURLSessionResponseCancel); return@withLifecycle }
         responseStartNs = PlatformUtils.nanoTime()
         httpResponse = didReceiveResponse as? NSHTTPURLResponse
         // NSURLCacheStorageNotAllowed = 2UL
@@ -211,13 +308,14 @@ class KourierURLProtocol : NSURLProtocol, NSURLSessionDataDelegateProtocol {
             cacheStoragePolicy = NSURLCacheStoragePolicy.NSURLCacheStorageNotAllowed
         )
         completionHandler(platform.Foundation.NSURLSessionResponseAllow)
-    }
+    } }
 
     override fun URLSession(
         session: NSURLSession,
         dataTask: NSURLSessionDataTask,
         didReceiveData: NSData
-    ) {
+    ) { withLifecycle {
+        if (stopped || finished) return@withLifecycle
         val chunkLen = didReceiveData.length.toLong()
         totalBytesReceived += chunkLen
 
@@ -233,13 +331,17 @@ class KourierURLProtocol : NSURLProtocol, NSURLSessionDataDelegateProtocol {
             }
         }
         client?.URLProtocol(this, didLoadData = didReceiveData)
-    }
+    } }
 
     override fun URLSession(
         session: NSURLSession,
         task: NSURLSessionTask,
         didCompleteWithError: NSError?
-    ) {
+    ) { withLifecycle { if (!stopped) finish(didCompleteWithError) } }
+
+    private fun finish(didCompleteWithError: NSError?) {
+        if (stopped || finished) return
+        finished = true
         val endNs = PlatformUtils.nanoTime()
         val durationMs = (endNs - startNs) / 1_000_000L
         val ttfbMs = if (responseStartNs > startNs) (responseStartNs - startNs) / 1_000_000L else 0L
@@ -334,6 +436,7 @@ class KourierURLProtocol : NSURLProtocol, NSURLSessionDataDelegateProtocol {
         }
 
         // Clean up references
+        faultScope.cancel()
         activeTask = null
         internalSession?.invalidateAndCancel()
         internalSession = null

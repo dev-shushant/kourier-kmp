@@ -30,4 +30,4 @@ A native host can use the supported explicit integration without adopting KMP in
 
 ## Current evidence
 
-Shared HTTP rules and deterministic counters are implemented. URL/GraphQL common parsers are being tested. Android OkHttp native HTTP execution is implemented with focused tests; Ktor execution is now tested on Android and iOS. Configured iOS URLSession execution, full native parity, and streaming adapters are still incomplete. This document is the delivery contract, not a feature announcement.
+Shared HTTP rules and deterministic counters are implemented. URL/GraphQL common parsers are being tested. Android OkHttp native HTTP execution is implemented with focused tests; Ktor execution is now tested on Android and iOS. Configured iOS URLSession selected faults now pass Foundation callback tests. Full forwarding/parity validation and streaming adapters are still incomplete. This document is the delivery contract, not a feature announcement.
