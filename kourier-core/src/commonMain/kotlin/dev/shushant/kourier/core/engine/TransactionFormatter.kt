@@ -10,7 +10,7 @@ object TransactionFormatter {
     fun formatSingleTransaction(tx: HttpTransaction): String {
         val sb = StringBuilder()
         sb.append("================================================================================\n")
-        sb.append("KOURIER HTTP TRANSACTION REPORT\n")
+        sb.append("APPARMORX RESILIENCE HTTP TRANSACTION REPORT\n")
         sb.append("================================================================================\n\n")
 
         // ── General Info ─────────────────────────────────────────────────────

@@ -7,7 +7,7 @@
     <application
         android:name=".SampleApplication"
         android:allowBackup="true"
-        android:label="Kourier Sample"
+        android:label="AppArmorX Resilience Sample"
         android:supportsRtl="true"
         android:theme="@android:style/Theme.Material.NoActionBar">
         <activity

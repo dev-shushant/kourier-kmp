@@ -29,7 +29,7 @@ actual fun KourierSquareLogo(modifier: Modifier) {
     if (bitmap != null) {
         Image(
             bitmap = bitmap,
-            contentDescription = "Kourier",
+            contentDescription = "AppArmorX Resilience",
             modifier = modifier
         )
     } else {
@@ -55,7 +55,7 @@ actual fun KourierBubbleImage(modifier: Modifier) {
     if (bitmap != null) {
         Image(
             bitmap = bitmap,
-            contentDescription = "Kourier Debug Bubble",
+            contentDescription = "AppArmorX Resilience inspector bubble",
             modifier = modifier
         )
     } else {

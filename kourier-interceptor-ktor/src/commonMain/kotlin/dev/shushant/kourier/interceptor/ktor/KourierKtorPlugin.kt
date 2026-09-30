@@ -1,6 +1,21 @@
 package dev.shushant.kourier.interceptor.ktor
 
 import dev.shushant.kourier.core.KourierCore
+import dev.shushant.kourier.core.ResilienceRuntime
+import dev.shushant.kourier.scenarios.GraphqlInspector
+import dev.shushant.kourier.scenarios.ScenarioAction
+import io.ktor.client.call.HttpClientCall
+import io.ktor.client.request.HttpResponseData
+import io.ktor.client.plugins.HttpRequestTimeoutException
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.HttpProtocolVersion
+import io.ktor.http.Headers
+import io.ktor.http.HttpHeaders
+import io.ktor.utils.io.InternalAPI
+import io.ktor.util.date.GMTDate
+import io.ktor.utils.io.errors.IOException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.currentCoroutineContext
 import dev.shushant.kourier.core.model.HttpRequest as KourierHttpRequest
 import dev.shushant.kourier.core.model.HttpResponse as KourierHttpResponse
 import dev.shushant.kourier.core.model.HttpTimings
@@ -24,12 +39,16 @@ class KourierKtorPluginConfig {
     var maxCallStackDepth: Int = 15
 }
 
+private val KourierGraphqlOperationKey = AttributeKey<String>("KourierGraphqlOperation")
+
 private val KourierTransactionIdKey = AttributeKey<String>("KourierTransactionId")
 private val KourierStartNsKey = AttributeKey<Long>("KourierStartNs")
 private val KourierInitialTxKey = AttributeKey<HttpTransaction>("KourierInitialTx")
 
+@OptIn(InternalAPI::class)
 val KourierKtorPlugin = createClientPlugin("KourierKtorPlugin", ::KourierKtorPluginConfig) {
     val pluginConfig = pluginConfig
+    val hostClient = client
 
     onRequest { request, content ->
         val transactionId = PlatformUtils.randomUuid()
@@ -81,6 +100,9 @@ val KourierKtorPlugin = createClientPlugin("KourierKtorPlugin", ::KourierKtorPlu
             }
         }
 
+        if (!isTruncated) GraphqlInspector.request(requestBodyString).operationName?.let {
+            request.attributes.put(KourierGraphqlOperationKey, it)
+        }
         val maskedRequestBody = dataMasker.maskPayload(requestBodyString)
 
         val rawHeaders = mutableListOf<Pair<String, String>>()
@@ -115,7 +137,43 @@ val KourierKtorPlugin = createClientPlugin("KourierKtorPlugin", ::KourierKtorPlu
 
     on(Send) { request ->
         try {
-            proceed(request)
+            val engine = ResilienceRuntime.engine
+            val rawHeaders = request.headers.entries().flatMap { (name, values) -> values.map { name to it } }
+            val decision = if (engine.isActive()) engine.decideUrl(
+                request.url.buildString(), request.method.value, rawHeaders,
+                request.attributes.getOrNull(KourierGraphqlOperationKey)
+            ) else null
+            if (decision == null || !engine.awaitDelay(decision)) {
+                proceed(request)
+            } else {
+                request.attributes.getOrNull(KourierInitialTxKey)?.let { initial ->
+                    val updated = initial.copy(
+                        tags = ResilienceRuntime.evidence(decision, "ktor"),
+                        totalBytesSent = if (decision.action == ScenarioAction.Forward) initial.totalBytesSent else 0
+                    )
+                    request.attributes.put(KourierInitialTxKey, updated)
+                    KourierCore.recordTransactionUpdated(updated)
+                }
+                when (val action = decision.action) {
+                    ScenarioAction.Forward -> proceed(request)
+                    ScenarioAction.Timeout -> throw HttpRequestTimeoutException(request)
+                    ScenarioAction.Disconnect -> throw IOException("Injected disconnect")
+                    is ScenarioAction.HttpResponse -> {
+                        val fixture = decision.fixture
+                        val body = (fixture?.body ?: "").encodeToByteArray()
+                        val headers = Headers.build {
+                            fixture?.contentType?.let { append(HttpHeaders.ContentType, it) }
+                            append(HttpHeaders.ContentLength, body.size.toString())
+                        }
+                        val callContext = currentCoroutineContext() + Job(request.executionContext)
+                        val syntheticCall = HttpClientCall(hostClient, request.build(), HttpResponseData(
+                            HttpStatusCode(action.status, "Injected response"), GMTDate(), headers,
+                            HttpProtocolVersion.HTTP_1_1, ByteReadChannel(body), callContext
+                        ))
+                        hostClient.receivePipeline.execute(Unit, syntheticCall.response).call
+                    }
+                }
+            }
         } catch (cause: Throwable) {
             val initialTx = request.attributes.getOrNull(KourierInitialTxKey)
             if (initialTx != null) {
@@ -192,6 +250,7 @@ val KourierKtorPlugin = createClientPlugin("KourierKtorPlugin", ::KourierKtorPlu
             totalBytesReceived = bodyBytes
         )
 
+        response.call.request.attributes.put(KourierInitialTxKey, completedTx)
         KourierCore.recordTransactionCompleted(completedTx)
     }
 }

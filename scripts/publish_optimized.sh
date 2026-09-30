@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ==============================================================================
-# Kourier SDK — Multiplatform Publishing & Distribution Pipeline
+# AppArmorX Resilience — Multiplatform Publishing & Distribution Pipeline
 #
 # Target Distribution Repository: https://github.com/dev-shushant/kourier.git
 #
@@ -308,6 +308,7 @@ EOF
 # Generate Package.swift
 cat <<EOF > "${DIST_STAGE_DIR}/Package.swift"
 // swift-tools-version:5.9
+// AppArmorX Resilience: legacy Kourier products and targets retained for compatibility.
 import PackageDescription
 
 let package = Package(
@@ -428,7 +429,7 @@ if [[ "${DRY_RUN}" == false && "${SKIP_REMOTE_PUSH}" == false ]]; then
                 exit 0
             fi
 
-            git commit -m "release: Kourier Android Maven artifacts v${VERSION_NAME}"
+            git commit -m "release: AppArmorX Resilience Android Maven artifacts v${VERSION_NAME}"
             git -c "pack.threads=${GRADLE_WORKERS}" \
                 -c pack.compression=1 \
                 -c http.extraheader= \
@@ -476,7 +477,7 @@ if [[ "${DRY_RUN}" == false && "${SKIP_REMOTE_PUSH}" == false ]]; then
         if git diff --cached --quiet; then
             log_info "No changes detected in distribution repository main branch."
         else
-            git commit -m "release: Kourier SDK v${VERSION_NAME}"
+            git commit -m "release: AppArmorX Resilience SDK v${VERSION_NAME}"
             log_info "Pushing main branch to ${DIST_REPO_URL}..."
             git -c "pack.threads=${GRADLE_WORKERS}" \
                 -c pack.compression=1 \
@@ -498,8 +499,8 @@ if [[ "${DRY_RUN}" == false && "${SKIP_REMOTE_PUSH}" == false ]]; then
             gh release delete "v${VERSION_NAME}" --repo "${GITHUB_REPO}" --yes 2>/dev/null || true
             gh release create "v${VERSION_NAME}" "${ZIP_PATH}" \
                 --repo "${GITHUB_REPO}" \
-                --title "Kourier SDK v${VERSION_NAME}" \
-                --notes "Release of Kourier SDK v${VERSION_NAME} for Android (Public Zero-Credential Maven) and iOS (SPM)."
+                --title "AppArmorX Resilience SDK v${VERSION_NAME}" \
+                --notes "Release of AppArmorX Resilience SDK (formerly Kourier) v${VERSION_NAME} for Android (Public Zero-Credential Maven) and iOS (SPM)."
             log_success "GitHub Release created on ${GITHUB_REPO} with KourierIos.xcframework.zip attached!"
         fi
     )

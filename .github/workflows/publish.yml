@@ -1,4 +1,4 @@
-name: Publish Kourier SDK
+name: Publish AppArmorX Resilience SDK
 
 on:
   push:

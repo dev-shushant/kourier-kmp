@@ -38,7 +38,7 @@ struct ContentView: View {
                     // ── Header with Theme Toggle ──────────────────────────────────
                     HStack(alignment: .center) {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("Kourier Inspector")
+                            Text("AppArmorX Resilience")
                                 .font(.title2.bold())
                                 .foregroundColor(textPrimary)
                             Text("Shake phone or tap below to launch")
@@ -77,7 +77,7 @@ struct ContentView: View {
                     // ── Action Buttons ────────────────────────────────────────
                     VStack(spacing: 12) {
                         ActionButton(
-                            title: "LAUNCH KOURIER DEBUGGER",
+                            title: "OPEN NETWORK INSPECTOR",
                             color: isDark ? Color(hex: 0x238636) : Color(hex: 0x1A7F37),
                             isDark: isDark
                         ) {

@@ -79,7 +79,10 @@ fun KourierSettingsModal(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
@@ -99,13 +102,13 @@ fun KourierSettingsModal(
 
                             Column {
                                 Text(
-                                    text = "Kourier Settings",
+                                    text = "AppArmorX Resilience",
                                     style = KourierTypography.titleLarge,
                                     color = colors.textPrimary
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "Live Trigger & Inspection Controls",
+                                    text = "Settings · Trigger & Inspection Controls",
                                     style = KourierTypography.caption,
                                     color = colors.textMuted
                                 )
@@ -138,7 +141,7 @@ fun KourierSettingsModal(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Choose how Kourier alerts you and triggers the inspector.",
+                        text = "Choose how the toolkit alerts you and opens the inspector.",
                         style = KourierTypography.caption,
                         color = colors.textMuted
                     )
@@ -395,7 +398,7 @@ fun KourierSettingsModal(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Kourier Multiplatform · Android & iOS Debugger",
+                            text = "AppArmorX Resilience · Android & iOS Inspector",
                             style = KourierTypography.caption,
                             color = colors.textMuted,
                             fontSize = 11.sp

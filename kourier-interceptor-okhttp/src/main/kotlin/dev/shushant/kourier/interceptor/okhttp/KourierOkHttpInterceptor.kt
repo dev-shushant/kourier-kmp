@@ -1,6 +1,7 @@
 package dev.shushant.kourier.interceptor.okhttp
 
 import dev.shushant.kourier.core.KourierCore
+import dev.shushant.kourier.core.ResilienceRuntime
 import dev.shushant.kourier.core.model.CallStackElement
 import dev.shushant.kourier.core.model.ErrorPayload
 import dev.shushant.kourier.core.model.HttpRequest
@@ -9,17 +10,30 @@ import dev.shushant.kourier.core.model.HttpTimings
 import dev.shushant.kourier.core.model.HttpTransaction
 import dev.shushant.kourier.core.model.TransactionStatus
 import dev.shushant.kourier.core.platform.PlatformUtils
-import okhttp3.Headers
+import dev.shushant.kourier.scenarios.GraphqlInspector
+import dev.shushant.kourier.scenarios.ScenarioAction
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import okhttp3.Interceptor
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.Response
+import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.internal.http.promisesBody
 import okio.Buffer
 import okio.GzipSource
 import java.io.EOFException
 import java.io.IOException
+import java.net.SocketException
+import java.net.SocketTimeoutException
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+import kotlin.time.Duration.Companion.milliseconds
 
 class KourierOkHttpInterceptor : Interceptor {
 
@@ -61,7 +75,7 @@ class KourierOkHttpInterceptor : Interceptor {
             uncompressedSizeBytes = requestBytes
         )
 
-        val initialTransaction = HttpTransaction(
+        var initialTransaction = HttpTransaction(
             id = transactionId,
             timestamp = startEpochMs,
             request = httpRequest,
@@ -76,7 +90,49 @@ class KourierOkHttpInterceptor : Interceptor {
         val response: Response
         val responseStartNs: Long
         try {
-            response = chain.proceed(request)
+            val engine = ResilienceRuntime.engine
+            val decision = if (engine.isActive()) runBlocking {
+                val operation = if (!isRequestTruncated) GraphqlInspector.request(requestBodyString).operationName else null
+                engine.decideUrl(request.url.toString(), request.method, requestHeadersList, operation)
+            } else null
+            val allowed = if (decision == null) false else {
+                try {
+                    runBlocking {
+                        val owner = coroutineContext[Job]!!
+                        val watcher = launch {
+                            while (isActive) {
+                                if (chain.call().isCanceled()) { owner.cancel(); break }
+                                delay(10.milliseconds)
+                            }
+                        }
+                        try { engine.awaitDelay(decision) } finally { watcher.cancel() }
+                    }
+                } catch (cancelled: CancellationException) {
+                    throw IOException("Canceled", cancelled)
+                }
+            }
+            if (chain.call().isCanceled()) throw IOException("Canceled")
+            if (allowed && decision != null) {
+                initialTransaction = initialTransaction.copy(
+                    tags = ResilienceRuntime.evidence(decision, "okhttp"),
+                    totalBytesSent = if (decision.action == ScenarioAction.Forward) requestBytes else 0
+                )
+                KourierCore.recordTransactionUpdated(initialTransaction)
+                response = when (val action = decision.action) {
+                    ScenarioAction.Forward -> chain.proceed(request)
+                    ScenarioAction.Timeout -> throw SocketTimeoutException("Injected timeout")
+                    ScenarioAction.Disconnect -> throw SocketException("Injected disconnect")
+                    is ScenarioAction.HttpResponse -> {
+                        val fixture = decision.fixture
+                        Response.Builder().request(request).protocol(Protocol.HTTP_1_1)
+                            .code(action.status).message("Injected response")
+                            .body((fixture?.body ?: "").toResponseBody(fixture?.contentType?.toMediaTypeOrNull()))
+                            .build()
+                    }
+                }
+            } else {
+                response = chain.proceed(request)
+            }
             responseStartNs = PlatformUtils.nanoTime()
         } catch (e: Exception) {
             val failureNs = PlatformUtils.nanoTime()

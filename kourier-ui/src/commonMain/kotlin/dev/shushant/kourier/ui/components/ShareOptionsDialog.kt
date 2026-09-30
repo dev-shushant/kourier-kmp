@@ -130,7 +130,7 @@ fun SingleTransactionShareDialog(
                         val text = TransactionFormatter.formatSingleTransaction(transaction)
                         val safePath = transaction.request.path.replace("/", "_").take(20)
                         ShareHandler.shareFile(
-                            fileName = "kourier_${transaction.request.method}${safePath}_${transaction.id}.txt",
+                            fileName = "apparmorx_resilience_${transaction.request.method}${safePath}_${transaction.id}.txt",
                             content = text,
                             mimeType = "text/plain",
                             chooserTitle = "Share .txt Report"
@@ -251,7 +251,7 @@ fun BatchExportDialog(
                         onDismiss()
                         val harJson = HarExporter.export(transactions)
                         ShareHandler.shareFile(
-                            fileName = "Kourier_Export.har",
+                            fileName = "AppArmorX_Resilience_Export.har",
                             content = harJson,
                             mimeType = "application/json",
                             chooserTitle = "Export .har Archive"
@@ -272,7 +272,7 @@ fun BatchExportDialog(
                         onDismiss()
                         val plainText = HarExporter.exportAsPlainText(transactions)
                         ShareHandler.shareFile(
-                            fileName = "Kourier_Export.txt",
+                            fileName = "AppArmorX_Resilience_Export.txt",
                             content = plainText,
                             mimeType = "text/plain",
                             chooserTitle = "Export .txt Report"
@@ -293,7 +293,7 @@ fun BatchExportDialog(
                         onDismiss()
                         val plainText = HarExporter.exportAsPlainText(transactions)
                         ShareHandler.shareText(
-                            title = "Kourier Network Report (${transactions.size} requests)",
+                            title = "AppArmorX Resilience Network Report (${transactions.size} requests)",
                             content = plainText,
                             chooserTitle = "Share via WhatsApp / Apps"
                         )

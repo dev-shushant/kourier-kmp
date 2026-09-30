@@ -21,6 +21,7 @@ dependencyResolutionManagement {
 rootProject.name = "kourier-kmp"
 
 include(":kourier-core")
+include(":kourier-scenarios")
 include(":kourier-storage")
 include(":kourier-interceptor-okhttp")
 include(":kourier-interceptor-ktor")

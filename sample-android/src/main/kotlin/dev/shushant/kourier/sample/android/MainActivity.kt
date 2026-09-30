@@ -96,7 +96,7 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Kourier Inspector",
+                                text = "AppArmorX Resilience",
                                 style = MaterialTheme.typography.h5,
                                 color = textPrimary
                             )
@@ -162,7 +162,7 @@ class MainActivity : ComponentActivity() {
                         shape = RoundedCornerShape(10.dp),
                         modifier = Modifier.fillMaxWidth().height(48.dp)
                     ) {
-                        Text(text = "LAUNCH KOURIER DEBUGGER", color = Color.White, style = MaterialTheme.typography.button)
+                        Text(text = "OPEN NETWORK INSPECTOR", color = Color.White, style = MaterialTheme.typography.button)
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
