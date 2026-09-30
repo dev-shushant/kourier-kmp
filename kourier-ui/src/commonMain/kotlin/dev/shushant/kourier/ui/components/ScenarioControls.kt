@@ -6,20 +6,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import dev.shushant.kourier.core.ResilienceRuntime
+import dev.shushant.kourier.core.model.HttpTransaction
 import dev.shushant.kourier.ui.theme.KourierTypography
 import dev.shushant.kourier.ui.theme.LocalKourierColors
 import kotlinx.coroutines.launch
 
 /** Shared inspector controls; activation is explicit and never restored automatically. */
 @Composable
-fun ScenarioControls(targetUrl: String = "", method: String = "GET") {
+fun ScenarioControls(transactions: List<HttpTransaction> = emptyList()) {
     val engine = ResilienceRuntime.engine
     val state by engine.state.collectAsState()
     val scope = rememberCoroutineScope()
     val colors = LocalKourierColors.current
     var showDetails by remember { mutableStateOf(false) }
     var showEditor by remember { mutableStateOf(false) }
-    if (showEditor) ScenarioEditor(targetUrl, method, onDismiss = { showEditor = false }, onLoaded = { showEditor = false; showDetails = true })
+    if (showEditor) ScenarioEditor(transactions, onDismiss = { showEditor = false }, onLoaded = { showEditor = false; showDetails = true })
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween

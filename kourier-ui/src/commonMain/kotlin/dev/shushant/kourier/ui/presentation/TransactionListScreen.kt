@@ -268,8 +268,7 @@ fun TransactionListScreen(
                     .background(colors.border)
             )
 
-            val target = transactions.firstOrNull { it.id == selectedTransactionId } ?: transactions.firstOrNull()
-            ScenarioControls(target?.request?.url ?: "", target?.request?.method ?: "GET")
+            ScenarioControls(transactions)
 
             // ── Filters & Search ────────────────────────────────────────────────
             FilterChipRow(

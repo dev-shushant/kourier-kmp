@@ -1,6 +1,5 @@
 package dev.shushant.kourier.scenarios
 
-import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -10,7 +9,6 @@ data class GraphqlInspection(val operationName: String? = null, val errorCount: 
 
 object GraphqlInspector {
     const val MAX_BODY_BYTES = 64 * 1024
-    private val json = Json { isLenient = false }
     private val operationPattern = Regex("[_A-Za-z][_0-9A-Za-z]{0,127}")
 
     fun request(body: String?): GraphqlInspection {
@@ -34,19 +32,6 @@ object GraphqlInspector {
 
     private fun parseObject(body: String?): JsonObject? {
         if (body == null || body.length > MAX_BODY_BYTES || body.encodeToByteArray().size > MAX_BODY_BYTES) return null
-        // Bound nesting before parsing to avoid adversarial recursion; braces inside strings are ignored.
-        var depth = 0
-        var quoted = false
-        var escaped = false
-        for (c in body) {
-            if (quoted) {
-                if (escaped) escaped = false else if (c == '\\') escaped = true else if (c == '"') quoted = false
-            } else when (c) {
-                '"' -> quoted = true
-                '{', '[' -> { if (++depth > 64) return null }
-                '}', ']' -> if (--depth < 0) return null
-            }
-        }
-        return try { json.parseToJsonElement(body) as? JsonObject } catch (_: Exception) { null }
+        return BoundedJson.parse(body, MAX_BODY_BYTES) as? JsonObject
     }
 }

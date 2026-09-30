@@ -12,6 +12,10 @@ class GraphqlInspectionTest {
         for (body in listOf("broken", "[]", "{\"operationName\":42}", "{\"operationName\":\"bad name\"}")) assertTrue(GraphqlInspector.request(body).parseFailed)
     }
 
+    @Test fun rejectsAmbiguousOperationKeys() {
+        assertTrue(GraphqlInspector.request("""{"operationName":"First","operationName":"Second"}""").parseFailed)
+    }
+
     @Test fun identifiesErrorsIndependentOfHttpStatus() {
         assertEquals(2, GraphqlInspector.response("""{"data":null,"errors":[{"message":"secret"},{"message":"other"}]}""").errorCount)
         assertEquals(GraphqlInspection(), GraphqlInspector.response("""{"data":{"ok":true}}"""))
