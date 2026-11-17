@@ -84,17 +84,10 @@ public struct KourierInspectorModifier: ViewModifier {
     @Binding var isPresented: Bool
 
     public func body(content: Content) -> some View {
-        if #available(iOS 17.0, macOS 14.0, *) {
-            content
-                .onChange(of: isPresented) { _, newValue in
-                    handlePresentation(newValue)
-                }
-        } else {
-            content
-                .onChange(of: isPresented) { newValue in
-                    handlePresentation(newValue)
-                }
-        }
+        content
+            .onChange(of: isPresented) { _, newValue in
+                handlePresentation(newValue)
+            }
     }
 
     private func handlePresentation(_ presented: Bool) {

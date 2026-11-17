@@ -65,7 +65,7 @@ The Android facade exposes configuration and interceptors while keeping storage 
 
 Dependency versions are defined in [gradle/libs.versions.toml](gradle/libs.versions.toml). The current checkout uses Kotlin 2.4.10, AGP 9.4.0, Compose Multiplatform 1.12.0, and Ktor 3.1.3. Keep Ktor at the repository's pinned version: the documented 3.2.0 DEX issue affects Android builds below API 34.
 
-The generated Swift manifest declares iOS 15. Verify the built framework's actual deployment requirement against the selected Xcode SDK before release; the manifest alone does not change the binary's minimum OS.
+The generated Swift manifest declares iOS 17. Verify the built framework's actual deployment requirement against the selected Xcode SDK before release; the manifest alone does not change the binary's minimum OS.
 
 ### Get the source
 
