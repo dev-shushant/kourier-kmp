@@ -244,6 +244,32 @@ fi
 ./gradlew "${GRADLE_ARGS[@]}" "${GRADLE_TASKS[@]}"
 log_success "Local verification/build tasks completed."
 
+# Fail the release if any KMP artifact a consumer needs is missing from the local Maven repo.
+# (Regression guard: iOS klibs were silently skipped in 0.0.3, breaking KMP consumers.)
+verify_published_artifacts() {
+    local repo_dir="${ROOT_DIR}/build/repo/${GROUP//.//}"
+    local missing=0
+    local kmp_modules=(kourier kourier-core kourier-storage kourier-ui kourier-interceptor-ktor kourier-interceptor-darwin kourier-noop)
+    for module in "${kmp_modules[@]}"; do
+        if [[ ! -f "${repo_dir}/${module}/${VERSION_NAME}/${module}-${VERSION_NAME}.module" ]]; then
+            log_error "Missing Gradle metadata: ${module}-${VERSION_NAME}.module"
+            missing=1
+        fi
+        for target in iosarm64 iossimulatorarm64; do
+            if [[ ! -f "${repo_dir}/${module}-${target}/${VERSION_NAME}/${module}-${target}-${VERSION_NAME}.klib" ]]; then
+                log_error "Missing iOS klib: ${module}-${target}-${VERSION_NAME}.klib"
+                missing=1
+            fi
+        done
+    done
+    if [[ ${missing} -ne 0 ]]; then
+        log_error "Published Maven repository is incomplete for KMP consumers. Aborting release."
+        exit 1
+    fi
+    log_success "All KMP/iOS artifacts present for ${VERSION_NAME}."
+}
+verify_published_artifacts
+
 # GitHub Packages is kept as a separate, non-fatal network publication.
 # Most compile/package tasks should now be UP-TO-DATE from the build above.
 if [[ -n "${GITHUB_TOKEN:-}" && "${DRY_RUN}" == false && "${SKIP_REMOTE_PUSH}" == false ]]; then
