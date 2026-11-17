@@ -383,8 +383,8 @@ EOF
 if [[ "${DRY_RUN}" == false && "${SKIP_REMOTE_PUSH}" == false ]]; then
     log_info "Synchronizing distribution repository: ${DIST_REPO_URL}..."
 
-    # Maven branch and SPM/main branch are independent, so publish them in
-    # parallel. This overlaps Git/network time without racing on build outputs.
+    # Maven branch and SPM/main branch are published sequentially: concurrent pushes
+    # to the same remote repo were rejected by GitHub ("remote rejected ... (failed)").
     push_maven_repo() {
         log_info "Updating zero-credential Maven artifacts on branch mvn-repo..."
         local mvn_stage_dir="${ROOT_DIR}/build/dist-mvn-git"
@@ -416,7 +416,6 @@ if [[ "${DRY_RUN}" == false && "${SKIP_REMOTE_PUSH}" == false ]]; then
         else
             cp -R "${ROOT_DIR}/build/repo/." "${mvn_stage_dir}/"
         fi
-
         (
             cd "${mvn_stage_dir}"
             git config --unset-all http.https://github.com/.extraheader 2>/dev/null || true
@@ -429,16 +428,26 @@ if [[ "${DRY_RUN}" == false && "${SKIP_REMOTE_PUSH}" == false ]]; then
             fi
 
             git commit -m "release: Kourier Android Maven artifacts v${VERSION_NAME}"
-            git -c "pack.threads=${GRADLE_WORKERS}" \
+
+            # Retry: GitHub can transiently reject pushes ("remote rejected ... (failed)").
+            attempt=1
+            until git -c "pack.threads=${GRADLE_WORKERS}" \
                 -c pack.compression=1 \
                 -c http.extraheader= \
-                push -u origin mvn-repo
+                push -u origin mvn-repo; do
+                if [[ ${attempt} -ge 4 ]]; then
+                    log_error "Failed to push mvn-repo after ${attempt} attempts."
+                    exit 1
+                fi
+                log_warn "mvn-repo push failed (attempt ${attempt}); syncing and retrying..."
+                sleep $((attempt * 5))
+                git -c http.extraheader= fetch --depth 1 origin mvn-repo 2>/dev/null || true
+                git rebase -X theirs origin/mvn-repo 2>/dev/null || git rebase --abort 2>/dev/null || true
+                attempt=$((attempt + 1))
+            done
         )
         log_success "Updated Maven artifacts on branch mvn-repo."
     }
-
-    push_maven_repo &
-    MVN_PUSH_PID=$!
 
     # 6.2 Push clean SPM layout to main branch
     CLONE_DIR="${ROOT_DIR}/build/dist-repo-git"
@@ -504,8 +513,9 @@ if [[ "${DRY_RUN}" == false && "${SKIP_REMOTE_PUSH}" == false ]]; then
         fi
     )
 
-    # Background branch push is a required publication; surface its failure.
-    if ! wait "${MVN_PUSH_PID}"; then
+    # Run sequentially AFTER the main/tag pushes: concurrent pushes to the same
+    # remote repo get rejected by GitHub. Maven branch push is a required publication.
+    if ! push_maven_repo; then
         log_error "Maven repository branch publication failed."
         exit 1
     fi
